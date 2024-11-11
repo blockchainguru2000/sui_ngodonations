@@ -107,7 +107,7 @@ module ngodonations::ngodonations {
     }
 
     //users enquires from the ngo
-    public entry fun user_enquire(self: &mut Ngo, ngoid: u64, enquire: String, ctx: &mut TxContext){
+    public entry fun user_enquire(self: &mut Ngo, enquire: String, ctx: &mut TxContext){
         // check aveilablity of ngo
         // assert!(umbrella.ngos.length()>=ngoid,ENOTAVAILABLE);
 
@@ -119,43 +119,23 @@ module ngodonations::ngodonations {
         self.enquiries.push_back(new_enquire);
 
     }
-
     //donate to ngo
-    public entry fun donate(umbrella:&mut NgoUmbrella, ngoid:u64, amount:Coin<SUI>, by:String, ctx:&mut TxContext) {
-        //check aveilablity of ngo
-        assert!(umbrella.ngos.length()>=ngoid,ENOTAVAILABLE);
+    public entry fun donate(self: &mut Ngo, ngoid:u64, coin:Coin<SUI>, by:String, ctx:&mut TxContext) {
         //check if amount is greater than zero
-        assert!(amount.value()>0,EINVALIDAMOUNT);
-        //let donation_amount = amount.value();
-        let ngo = &mut umbrella.ngos[ngoid];
-        // Convert the Coin<SUI> to a Balance<SUI>
-        let coin_balance = coin::into_balance(amount);
-        balance::join(&mut ngo.balance, coin_balance);
-        // balance::join(&mut ngo.balance, coin::into_balance(amount));
+        assert!(coin.value()  >0, EINVALIDAMOUNT);
+        coin::put(&mut self.balance, coin)
     }
 
     //widthdraw from ngo
-    public entry fun withdraw_funds(
+    public fun withdraw_funds(
         owner: &AdminCap,
-        umbrella: &mut NgoUmbrella,
-        amount: u64,
-        ngoid: u64,
-        recipient: address,
+        self: &mut Ngo,
         ctx: &mut TxContext
-    ) {
-        //verify amount
-        assert!(amount > 0 && amount <= umbrella.ngos[ngoid].balance.value(), EINVALIDAMOUNT);
-           //check aveilablity of ngo
-        assert!(umbrella.ngos.length()>=ngoid,ENOTAVAILABLE);
-        //check if its the owner perfroming the action
-        assert!(owner.ngoid==&umbrella.ngos[ngoid].ngoid,ENOTOWNER);
-        let _balance=&umbrella.ngos[ngoid].balance.value();
-        let remaining = take(&mut umbrella.ngos[ngoid].balance, amount, ctx);  // Withdraw amount
-        transfer::public_transfer(remaining, recipient);  // Transfer withdrawn funds
-        event::emit(Withdrawal {  // Emit FundWithdrawal event
-            amount,
-            recipient,
-        });
+    ) : Coin<SUI> {
+        assert!(owner.ngoid == object::id(self), ENOTOWNER);
+        let balance = balance::withdraw_all(&mut self.balance);
+        let coin = balance.into_coin(ctx);
+        coin
     }
 
 }
