@@ -1,13 +1,12 @@
 module ngodonations::ngodonations {
     use std::string::{String};
-    use sui::coin::{Self, Coin, take};
+    use sui::coin::{Self, Coin};
 
     use sui::balance::{Self, Balance, zero};
     use sui::sui::SUI;
-    use sui::event;
+
 
      //define errors
-     const ENOTAVAILABLE:u64=0;
      const ENOTOWNER:u64=1;
      const EINVALIDAMOUNT:u64=2;
 
@@ -55,7 +54,7 @@ module ngodonations::ngodonations {
         amount: u64
     }
     //CRETE NGO
-    public entry fun create_ngo(name:String, description:String ,operationRegion:String, ctx:&mut TxContext) {
+    public entry fun create_ngo(name:String, description: String , operationRegion:String, ctx: &mut TxContext) {
         let id = object::new(ctx);
         let inner = object::uid_to_inner(&id);
  
@@ -82,7 +81,7 @@ module ngodonations::ngodonations {
     }
 
     //add activities to ngo
-    public entry fun add_activities(self: &mut Ngo, owner:&AdminCap, ngoid:u64, name:String, description:String, ctx:&mut TxContext) {
+    public fun add_activities(owner:&AdminCap, self: &mut Ngo, name:String, description:String) {
         assert!(owner.ngoid == object::id(self), ENOTOWNER);
         //add new activity
         let new_activity=Activity{
@@ -93,7 +92,7 @@ module ngodonations::ngodonations {
     }
 
     //register users
-    public entry fun user_register(self: &mut Ngo, name: String, region: String, ctx: &mut TxContext) {
+    public fun user_register(self: &mut Ngo, name: String, region: String) {
         //check aveilablity of ngo
         // assert!(umbrella.ngos.length()>=ngoid,ENOTAVAILABLE);
         
@@ -107,7 +106,7 @@ module ngodonations::ngodonations {
     }
 
     //users enquires from the ngo
-    public entry fun user_enquire(self: &mut Ngo, enquire: String, ctx: &mut TxContext){
+    public entry fun user_enquire(self: &mut Ngo, enquire: String){
         // check aveilablity of ngo
         // assert!(umbrella.ngos.length()>=ngoid,ENOTAVAILABLE);
 
@@ -120,7 +119,7 @@ module ngodonations::ngodonations {
 
     }
     //donate to ngo
-    public entry fun donate(self: &mut Ngo, ngoid:u64, coin:Coin<SUI>, by:String, ctx:&mut TxContext) {
+    public fun donate(self: &mut Ngo, coin:Coin<SUI>) {
         //check if amount is greater than zero
         assert!(coin.value()  >0, EINVALIDAMOUNT);
         coin::put(&mut self.balance, coin)
