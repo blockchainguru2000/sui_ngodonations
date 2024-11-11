@@ -11,17 +11,10 @@ module ngodonations::ngodonations {
      const ENOTOWNER:u64=1;
      const EINVALIDAMOUNT:u64=2;
 
-    //define the structs for the ngo
-    public struct NgoUmbrella has key,store{
-        id: UID,
-        name: String,
-        ngos: vector<Ngo>,
-        ngoscount: u64
-    }
     //define ngo type
-    public struct Ngo has store{
-        id: u64,
-        ngoid: ID,
+    public struct Ngo has key, store {
+        id:UID,
+        num: u64,
         name: String,
         description: String,
         operationRegion: String,
@@ -38,7 +31,6 @@ module ngodonations::ngodonations {
     }
     //define type activity
     public struct Activity has store {
-        id: u64,
         name: String,
         description: String
     }
@@ -64,42 +56,15 @@ module ngodonations::ngodonations {
         recipient: address,
         amount: u64
     }
-
-    //create nggos umbrella
-    public entry fun create_ngo_umbrella(name: String, ctx:&mut TxContext) {
-
-        let new_umbrella=NgoUmbrella{
-            id: object::new(ctx),
-            name,
-            ngos:vector::empty(),
-            ngoscount:0
-        };
-        event::emit(UmbrellaCraeated{
-            name
-        });
-
-        transfer::share_object(new_umbrella)
-    }
-
     //CRETE NGO
-    public entry fun create_ngo(umbrella:&mut NgoUmbrella, name:String, description:String ,operationRegion:String, ctx:&mut TxContext) {
-        //check if the name of the ngo is already taken
-        let mut index=0;
-        let ngocount=umbrella.ngos.length();
-        let ngo_uid=object::new(ctx);
-        let ngoid=object::uid_to_inner(&ngo_uid);
-        
-        while(index < ngocount){
-            let ngo=&umbrella.ngos[index];
-            if(ngo.name==name){
-                abort 0
-            };
-            index=index+1;
-        };
+    public entry fun create_ngo(name:String, description:String ,operationRegion:String, ctx:&mut TxContext) {
+        let id = object::new(ctx);
+        let inner = object::uid_to_inner(&id);
+ 
         //create a new ngo
         let new_ngo=Ngo{
-                id:ngocount,
-                ngoid,
+                id,
+                num: 0,
                 name,
                 description,
                 operationRegion,
@@ -108,33 +73,25 @@ module ngodonations::ngodonations {
                 enquiries:vector::empty(),
                 balance:zero<SUI>()
         };
-
         //add admin capabilities
-         transfer::transfer(AdminCap {
-                id:ngo_uid,
-                ngoid,
-            }, tx_context::sender(ctx));
+        transfer::transfer(AdminCap {
+            id: object::new(ctx),
+            ngoid: inner,
+        }, tx_context::sender(ctx));
 
-            //add ngo to list of the ngos in the umbrella
-            umbrella.ngos.push_back(new_ngo)
+        transfer::share_object(new_ngo);
+
     }
 
     //add activities to ngo
-    public entry fun add_activities(owner:&AdminCap, umbrella:&mut NgoUmbrella, ngoid:u64, name:String, description:String, ctx:&mut TxContext) {
-        //check aveilablity of ngo
-        assert!(umbrella.ngos.length()>=ngoid,ENOTAVAILABLE);
-        //check if its the owner perfroming the action
-        assert!(owner.ngoid==&umbrella.ngos[ngoid].ngoid,ENOTOWNER);
-
-        //create new activity
+    public entry fun add_activities(self: &mut Ngo, owner:&AdminCap, ngoid:u64, name:String, description:String, ctx:&mut TxContext) {
+        assert!(owner.ngoid == object::id(self), ENOTOWNER);
+        //add new activity
         let new_activity=Activity{
-            id:umbrella.ngos[ngoid].activities.length(),
             name,
             description
         };
-
-        //add new activity
-        umbrella.ngos[ngoid].activities.push_back(new_activity);
+        self.activities.push_back(new_activity);
     }
 
     //register users
