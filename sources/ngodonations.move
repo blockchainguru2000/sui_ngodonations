@@ -1,5 +1,3 @@
-
-/// Module: ngodonations
 module ngodonations::ngodonations {
     use std::string::{String};
     use sui::coin::{Self, Coin, take};
@@ -98,7 +96,6 @@ module ngodonations::ngodonations {
             };
             index=index+1;
         };
-
         //create a new ngo
         let new_ngo=Ngo{
                 id:ngocount,
@@ -111,8 +108,8 @@ module ngodonations::ngodonations {
                 enquiries:vector::empty(),
                 balance:zero<SUI>()
         };
-        //add admin capabilities
 
+        //add admin capabilities
          transfer::transfer(AdminCap {
                 id:ngo_uid,
                 ngoid,
@@ -178,18 +175,15 @@ module ngodonations::ngodonations {
         //check if amount is greater than zero
         assert!(amount.value()>0,EINVALIDAMOUNT);
         //let donation_amount = amount.value();
-          let ngo = &mut umbrella.ngos[ngoid];
-
+        let ngo = &mut umbrella.ngos[ngoid];
         // Convert the Coin<SUI> to a Balance<SUI>
         let coin_balance = coin::into_balance(amount);
-
         balance::join(&mut ngo.balance, coin_balance);
         // balance::join(&mut ngo.balance, coin::into_balance(amount));
     }
 
     //widthdraw from ngo
-
-     public entry fun withdraw_funds(
+    public entry fun withdraw_funds(
         owner: &AdminCap,
         umbrella: &mut NgoUmbrella,
         amount: u64,
