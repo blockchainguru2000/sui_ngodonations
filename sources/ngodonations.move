@@ -2,8 +2,9 @@
 /// Module: ngodonations
 module ngodonations::ngodonations {
     use std::string::{String};
-use sui::coin::{Coin,split, put,take};
-use sui::balance::{Balance,zero};
+use sui::coin::{Self,Coin,split, put,take};
+
+use sui::balance::{Self, Balance,zero};
 use sui::sui::SUI;
 use sui::event;
      //define errors
@@ -187,12 +188,19 @@ public entry fun user_enquire(umbrella:&mut NgoUmbrella,ngoid:u64,enquire:String
 //donate to ngo
 
 
-public entry fun donate(umbrella:&mut NgoUmbrella,ngoid:u64,amount: &mut Coin<SUI>,by:String,ctx:&mut TxContext){
+public entry fun donate(umbrella:&mut NgoUmbrella,ngoid:u64,amount:Coin<SUI>,by:String,ctx:&mut TxContext){
     //check aveilablity of ngo
     assert!(umbrella.ngos.length()>=ngoid,ENOTAVAILABLE);
     //check if amount is greater than zero
     assert!(amount.value()>0,EINVALIDAMOUNT);
+    //let donation_amount = amount.value();
+      let ngo = &mut umbrella.ngos[ngoid];
 
+    // Convert the Coin<SUI> to a Balance<SUI>
+    let coin_balance = coin::into_balance(amount);
+
+    balance::join(&mut ngo.balance, coin_balance);
+     //  balance::join(&mut ngo.balance, coin::into_balance(amount));
 }
 
 //widthdraw from ngo
