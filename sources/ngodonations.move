@@ -42,7 +42,6 @@ module ngodonations::ngodonations {
 
     //define the enquire type
     public struct Enquire has store {
-        id: u64,
         enquire: String
     }
 
@@ -108,18 +107,16 @@ module ngodonations::ngodonations {
     }
 
     //users enquires from the ngo
-    public entry fun user_enquire(umbrella: &mut NgoUmbrella, ngoid: u64, enquire: String, ctx: &mut TxContext){
-        //check aveilablity of ngo
-        assert!(umbrella.ngos.length()>=ngoid,ENOTAVAILABLE);
+    public entry fun user_enquire(self: &mut Ngo, ngoid: u64, enquire: String, ctx: &mut TxContext){
+        // check aveilablity of ngo
+        // assert!(umbrella.ngos.length()>=ngoid,ENOTAVAILABLE);
 
          //create a new enquire
         let new_enquire=Enquire{
-            id:umbrella.ngos[ngoid].enquiries.length(),
             enquire
         };
-
         //add new member
-        umbrella.ngos[ngoid].enquiries.push_back(new_enquire)
+        self.enquiries.push_back(new_enquire);
 
     }
 
