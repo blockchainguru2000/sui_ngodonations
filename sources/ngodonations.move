@@ -36,7 +36,6 @@ module ngodonations::ngodonations {
     }
     //define type member
     public struct Member has store {
-        id: u64,
         name: String,
         region: String
     }
@@ -95,18 +94,17 @@ module ngodonations::ngodonations {
     }
 
     //register users
-    public entry fun user_register(umbrella: &mut NgoUmbrella, ngoid: u64, name: String, region: String, ctx: &mut TxContext) {
+    public entry fun user_register(self: &mut Ngo, name: String, region: String, ctx: &mut TxContext) {
         //check aveilablity of ngo
-        assert!(umbrella.ngos.length()>=ngoid,ENOTAVAILABLE);
+        // assert!(umbrella.ngos.length()>=ngoid,ENOTAVAILABLE);
+        
         //register new member
         let new_member=Member{
-            id:umbrella.ngos[ngoid].members.length(),
             name,
             region
         };
-
         //add new member
-        umbrella.ngos[ngoid].members.push_back(new_member);
+        self.members.push_back(new_member);
     }
 
     //users enquires from the ngo
