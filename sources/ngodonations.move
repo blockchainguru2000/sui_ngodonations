@@ -1,9 +1,9 @@
 
 /// Module: ngodonations
 module ngodonations::ngodonations {
-    use std::string::{String};
+use std::string::{String};
 use sui::coin::{Self,Coin,split, put,take};
-
+use sui::object::uid_to_inner;
 use sui::balance::{Self, Balance,zero};
 use sui::sui::SUI;
 use sui::event;
@@ -11,18 +11,11 @@ use sui::event;
      const ENOTAVAILABLE:u64=0;
      const ENOTOWNER:u64=1;
      const EINVALIDAMOUNT:u64=2;
+     const USERNOTREGISTERED:u64=3;
     //define the structs for the ngo
-    public struct NgoUmbrella has key,store{
+    public struct Ngo has key,store{
 
         id:UID,
-        name:String,
-        ngos:vector<Ngo>,
-        ngoscount:u64
-    }
-
-    //define ngo type
-    public struct Ngo has store{
-        id:u64,
         ngoid:ID,
         name:String,
         description:String,
@@ -30,7 +23,7 @@ use sui::event;
         activities:vector<Activity>,
         members:vector<Member>,
         enquiries:vector<Enquire>,
-        balance:Balance<SUI>
+        balance:Balance<SUI>,
     }
 
     //admin cap
@@ -54,7 +47,8 @@ use sui::event;
     //define the enquire type
     public struct Enquire has store{
         id:u64,
-        enquire:String
+        enquire:String,
+        by:u64
     }
 
     //define events
@@ -67,49 +61,19 @@ use sui::event;
     amount:u64
 }
 
-//create nggos umbrella
-
-public entry fun create_ngo_umbrella(name:String,ctx:&mut TxContext){
-
-    let id=object::new(ctx);
-
-    let new_umbrella=NgoUmbrella{
-        id,
-        name,
-        ngos:vector::empty(),
-        ngoscount:0
-    };
-    //share ngo
-
-
-
-    event::emit(UmbrellaCraeated{
-        name
-    });
-    transfer::share_object(new_umbrella)
-}
 //CRETE NGO
 
-public entry fun create_ngo(umbrella:&mut NgoUmbrella,name:String,description:String,operationRegion:String,ctx:&mut TxContext){
+public entry fun create_ngo(name:String,description:String,operationRegion:String,ctx:&mut TxContext){
 
 
-//check if the name of the ngo is already taken
+//check if the name of the ngo is already taken;
 
-let mut index=0;
-let ngocount=umbrella.ngos.length();
-let ngo_uid=object::new(ctx);
-let ngoid=object::uid_to_inner(&ngo_uid);
-while(index < ngocount){
-    let ngo=&umbrella.ngos[index];
-    if(ngo.name==name){
-        abort 0
-    };
-    index=index+1;
-};
+let id=object::new(ctx);
+let ngoid=object::uid_to_inner(&id);
 
 //create a new ngo
 let new_ngo=Ngo{
-        id:ngocount,
+        id,
         ngoid,
         name,
         description,
@@ -122,108 +86,115 @@ let new_ngo=Ngo{
 //add admin capabilities
 
  transfer::transfer(AdminCap {
-        id:ngo_uid,
+        id:object::new(ctx),
         ngoid,
     }, tx_context::sender(ctx));
 
-    //add ngo to list of the ngos in the umbrella
-    umbrella.ngos.push_back(new_ngo)
+transfer::share_object(new_ngo);
 }
 //add activities to ngo
 
-public entry fun add_activities(owner:&AdminCap,umbrella:&mut NgoUmbrella,ngoid:u64, name:String,description:String,ctx:&mut TxContext){
+public entry fun add_activities(owner:&AdminCap,ngo:&mut Ngo,name:String,description:String,ctx:&mut TxContext){
 
-    //check aveilablity of ngo
-    assert!(umbrella.ngos.length()>=ngoid,ENOTAVAILABLE);
     //check if its the owner perfroming the action
-    assert!(owner.ngoid==&umbrella.ngos[ngoid].ngoid,ENOTOWNER);
-
+    assert!(owner.ngoid==&ngo.ngoid,ENOTOWNER);
+    let activitiesid=ngo.activities.length();
     //create new activity
     let new_activity=Activity{
-        id:umbrella.ngos[ngoid].activities.length(),
+        id:activitiesid,
         name,
         description
     };
 
     //add new activity
-    umbrella.ngos[ngoid].activities.push_back(new_activity);
+    ngo.activities.push_back(new_activity);
 
 }
 //register users
 
-public entry fun user_register(umbrella:&mut NgoUmbrella,ngoid:u64,name:String,region:String,ctx:&mut TxContext){
+public entry fun user_register(ngo:&mut Ngo,name:String,region:String,ctx:&mut TxContext){
 
-     //check aveilablity of ngo
-    assert!(umbrella.ngos.length()>=ngoid,ENOTAVAILABLE);
+//get id
+  let userid=ngo.members.length();
 
+//check if the username is already taken 
+let mut index=0;
+while(index < userid){
+    let user=&ngo.members[index];
+
+    if(user.name==name){
+        abort 0
+    };
+    index=index+1;
+};
     //register new member
     let new_member=Member{
-        id:umbrella.ngos[ngoid].members.length(),
+        id:userid,
         name,
         region
     };
 
     //add new member
-    umbrella.ngos[ngoid].members.push_back(new_member);
+    ngo.members.push_back(new_member);
 
 }
 //users enquires from the ngo
 
 
-public entry fun user_enquire(umbrella:&mut NgoUmbrella,ngoid:u64,enquire:String,ctx:&mut TxContext){
+public entry fun user_enquire(ngo:&mut Ngo,userid:u64,enquire:String,ctx:&mut TxContext){
 
-     //check aveilablity of ngo
-    assert!(umbrella.ngos.length()>=ngoid,ENOTAVAILABLE);
+     //check if user is registered
+    assert!(ngo.members.length()>=userid,USERNOTREGISTERED);
 
+     let enquireid=ngo.enquiries.length();
      //create a new enquire
     let new_enquire=Enquire{
-        id:umbrella.ngos[ngoid].enquiries.length(),
-        enquire
+        id:enquireid,
+        enquire,
+        by:userid
     };
 
     //add new member
-    umbrella.ngos[ngoid].enquiries.push_back(new_enquire)
+    ngo.enquiries.push_back(new_enquire)
 
 }
 //donate to ngo
 
 
-public entry fun donate(umbrella:&mut NgoUmbrella,ngoid:u64,amount:Coin<SUI>,by:String,ctx:&mut TxContext){
-    //check aveilablity of ngo
-    assert!(umbrella.ngos.length()>=ngoid,ENOTAVAILABLE);
+public entry fun donate(ngo:&mut Ngo,amount:Coin<SUI>,ctx:&mut TxContext){
+    
     //check if amount is greater than zero
-    assert!(amount.value()>0,EINVALIDAMOUNT);
-    //let donation_amount = amount.value();
-      let ngo = &mut umbrella.ngos[ngoid];
 
+    assert!(amount.value()>0,EINVALIDAMOUNT);
+
+    //let donation_amount = amount.value();
+     
     // Convert the Coin<SUI> to a Balance<SUI>
     let coin_balance = coin::into_balance(amount);
 
     balance::join(&mut ngo.balance, coin_balance);
      //  balance::join(&mut ngo.balance, coin::into_balance(amount));
 }
-
 //widthdraw from ngo
 
  public entry fun withdraw_funds(
         owner: &AdminCap,
-        umbrella:&mut NgoUmbrella,
+        ngo:&mut Ngo,
         amount:u64,
-        ngoid:u64,
         recipient:address,
          ctx: &mut TxContext,
     ) {
 
         //verify amount
-      assert!(amount > 0 && amount <= umbrella.ngos[ngoid].balance.value(), EINVALIDAMOUNT);
-       //check aveilablity of ngo
-    assert!(umbrella.ngos.length()>=ngoid,ENOTAVAILABLE);
-    //check if its the owner perfroming the action
-    assert!(owner.ngoid==&umbrella.ngos[ngoid].ngoid,ENOTOWNER);
+      assert!(amount > 0 && amount <= ngo.balance.value(), EINVALIDAMOUNT);
 
-        let _balance=&umbrella.ngos[ngoid].balance.value();
+    
+    //check if its the owner perfroming the action
+    assert!(owner.ngoid==&ngo.ngoid,ENOTOWNER);
+
+        let _balance=&ngo.balance.value();
         
-        let remaining = take(&mut umbrella.ngos[ngoid].balance, amount, ctx);  // Withdraw amount
+        let remaining = take(&mut ngo.balance, amount, ctx);  // Withdraw amount
         transfer::public_transfer(remaining, recipient);  // Transfer withdrawn funds
        
         event::emit(Withdrawal {  // Emit FundWithdrawal event
